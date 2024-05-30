@@ -305,16 +305,18 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
     }
 
     private void signDocument() {
-        if (selectedFilePath != null && !selectedFilePath.isEmpty() && privateKey != null && certificateChain != null) {
+        if (selectedFilePath != null && !selectedFilePath.isEmpty()) {
             Log.d("InicioActivity", "Document path: " + selectedFilePath);
             Intent intent = new Intent(this, MostrarDocumentoActivity.class);
             intent.putExtra("documentPath", selectedFilePath);
             startActivity(intent);
         } else {
-            Toast.makeText(this, "Por favor, seleccione un documento y un certificado primero.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Por favor, seleccione un documento primero.", Toast.LENGTH_SHORT).show();
         }
     }
+
 }
+
 
 
 
