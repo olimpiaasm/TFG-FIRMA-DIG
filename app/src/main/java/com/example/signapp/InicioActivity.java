@@ -32,6 +32,7 @@ import java.io.FileOutputStream;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
+import java.util.Enumeration;
 import java.util.Map;
 
 import android.app.AlertDialog;
@@ -274,14 +275,25 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
             fis = new FileInputStream(selectedCertificatePath);
             keyStore.load(fis, password.toCharArray());
 
-            String alias = keyStore.aliases().nextElement();
-            privateKey = (PrivateKey) keyStore.getKey(alias, password.toCharArray());
-            certificateChain = keyStore.getCertificateChain(alias);
+            String alias = null;
+            Enumeration<String> aliases = keyStore.aliases();
+            if (aliases.hasMoreElements()) {
+                alias = aliases.nextElement();
+            }
 
-            saveImportedCertificate(alias, selectedCertificatePath);
+            if (alias != null) {
+                privateKey = (PrivateKey) keyStore.getKey(alias, password.toCharArray());
+                certificateChain = keyStore.getCertificateChain(alias);
 
-            Toast.makeText(this, "Certificado importado correctamente", Toast.LENGTH_SHORT).show();
-            return true;
+                // Guardar alias y ruta del certificado
+                saveImportedCertificate(alias, selectedCertificatePath);
+
+                Toast.makeText(this, "Certificado importado correctamente", Toast.LENGTH_SHORT).show();
+                return true;
+            } else {
+                Toast.makeText(this, "No se encontró ningún alias en el certificado", Toast.LENGTH_SHORT).show();
+                return false;
+            }
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error importando certificado. Verifica la contraseña e inténtalo de nuevo.", Toast.LENGTH_SHORT).show();
@@ -304,6 +316,7 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         editor.apply();
     }
 
+
     private void signDocument() {
         if (selectedFilePath != null && !selectedFilePath.isEmpty()) {
             Log.d("InicioActivity", "Document path: " + selectedFilePath);
@@ -314,8 +327,9 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
             Toast.makeText(this, "Por favor, seleccione un documento primero.", Toast.LENGTH_SHORT).show();
         }
     }
-
 }
+
+
 
 
 
