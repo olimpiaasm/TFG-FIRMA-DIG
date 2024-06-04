@@ -91,7 +91,7 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         String savedFilePath = preferences.getString(PREF_SELECTED_FILE_PATH, null);
         if (savedFilePath != null) {
             selectedFilePath = savedFilePath;
-            textViewSelectedDocument.setText("Documento seleccionado: " + savedFilePath);
+
             textViewSelectedDocument.setVisibility(View.VISIBLE);
         }
 

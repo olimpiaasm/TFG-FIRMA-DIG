@@ -75,7 +75,7 @@ public class RegistroActivity extends AppCompatActivity {
         buttonLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(RegistroActivity.this, MainActivity.class);
+                Intent intent = new Intent(RegistroActivity.this, LoginActivity.class);
                 startActivity(intent);
             }
         });

@@ -10,7 +10,7 @@ import android.service.autofill.UserData;
 public class DatabaseHelper extends SQLiteOpenHelper{
 
     private static final String DATABASE_NAME = "UserDatabase";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
     public static final String TABLE_NAME = "users";
     private static final String COLUMN_ID = "id";
     public static final String COLUMN_NAME = "name";
@@ -63,5 +63,6 @@ public class DatabaseHelper extends SQLiteOpenHelper{
 
         return count > 0;
     }
+
 
 }
