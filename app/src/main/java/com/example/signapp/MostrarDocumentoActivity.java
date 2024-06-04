@@ -2,6 +2,7 @@ package com.example.signapp;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -236,21 +237,12 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
     private void saveSignedPdf() {
         try {
-            PdfDocument document = new PdfDocument();
-            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(pdfBitmap.getWidth(), pdfBitmap.getHeight(), 1).create();
-            PdfDocument.Page page = document.startPage(pageInfo);
-            Canvas canvas = page.getCanvas();
-            canvas.drawBitmap(pdfBitmap, 0, 0, null);
-            document.finishPage(page);
-
-            File signedPdfFile = new File(getExternalFilesDir(null), "signed_document.pdf");
-            FileOutputStream fos = new FileOutputStream(signedPdfFile);
-            document.writeTo(fos);
-            document.close();
-            fos.close();
-
-            Toast.makeText(this, "Documento firmado guardado en: " + signedPdfFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
-        } catch (IOException e) {
+            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("application/pdf");
+            intent.putExtra(Intent.EXTRA_TITLE, "signed_document.pdf");
+            startActivityForResult(intent, 101);
+        } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error guardando el documento firmado", Toast.LENGTH_SHORT).show();
         }
