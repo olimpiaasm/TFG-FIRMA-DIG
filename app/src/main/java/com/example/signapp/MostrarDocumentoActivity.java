@@ -5,27 +5,39 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.pdf.PdfDocument;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
+
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.security.cert.Certificate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +45,7 @@ import java.util.Map;
 public class MostrarDocumentoActivity extends AppCompatActivity {
 
     private static final String PREF_IMPORTED_CERTIFICATE_PATH_PREFIX = "imported_certificate_";
+    private static final String PREF_IMPORTED_CERTIFICATE_ALIAS = "imported_certificate_alias";
     private ImageView pdfImageView;
     private PdfRenderer pdfRenderer;
     private PdfRenderer.Page currentPage;
@@ -40,12 +53,17 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     private FloatingActionButton fab;
     private FloatingActionButton saveFab;
     private String selectedCertificatePath;
+    private String importedCertificateAlias;
+    private String documentName;
     private float startX, startY, endX, endY;
+    private float signatureStartX, signatureStartY;
     private Bitmap pdfBitmap;
     private Canvas pdfCanvas;
     private Paint paint;
     private View selectionOverlay;
     private boolean areaSelected = false; // Flag to control area selection
+    private Bitmap signaturePreviewBitmap;
+    private float signatureX, signatureY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +75,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         saveFab = findViewById(R.id.save_fab);
 
         String documentPath = getIntent().getStringExtra("documentPath");
+        documentName = new File(documentPath).getName(); // Get the document name
         openPdfRenderer(documentPath);
         showPage(0); // Muestra la primera página
 
@@ -88,6 +107,10 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
             }
         };
         addContentView(selectionOverlay, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        // Obtener alias del certificado importado
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        importedCertificateAlias = preferences.getString(PREF_IMPORTED_CERTIFICATE_ALIAS, null);
     }
 
     private void openPdfRenderer(String filePath) {
@@ -157,7 +180,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
     private void showCertificateSelectionDialog() {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        Map<String, ?> allEntries = preferences.getAll();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Seleccionar Certificado");
@@ -165,11 +187,10 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         List<String> certificateAliases = new ArrayList<>();
         List<String> certificatePaths = new ArrayList<>();
 
-        for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
-            if (entry.getKey().startsWith(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX)) {
-                certificateAliases.add(entry.getKey().replace(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX, ""));
-                certificatePaths.add((String) entry.getValue());
-            }
+        // Mostrar solo el certificado importado
+        if (importedCertificateAlias != null) {
+            certificateAliases.add(importedCertificateAlias);
+            certificatePaths.add(preferences.getString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + importedCertificateAlias, null));
         }
 
         String[] certificateArray = new String[certificateAliases.size()];
@@ -201,38 +222,104 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Vista previa de la firma");
 
-        ImageView imageView = new ImageView(this);
-        imageView.setImageBitmap(createSignaturePreviewBitmap());
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.activity_firmadocumento, null);
+        builder.setView(dialogView);
 
-        builder.setView(imageView);
+        ImageView signaturePreviewImageView = dialogView.findViewById(R.id.signaturePreviewImageView);
+        SeekBar scaleSeekBar = dialogView.findViewById(R.id.scaleSeekBar);
+
+        Bitmap signatureBitmap = createSignaturePreviewBitmap();
+        signaturePreviewImageView.setImageBitmap(signatureBitmap);
+
+        scaleSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float scale = 1 + (progress / 50.0f);
+                Matrix matrix = new Matrix();
+                matrix.postScale(scale, scale);
+                Bitmap scaledBitmap = Bitmap.createBitmap(signatureBitmap, 0, 0, signatureBitmap.getWidth(), signatureBitmap.getHeight(), matrix, true);
+                signaturePreviewImageView.setImageBitmap(scaledBitmap);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        signaturePreviewImageView.setOnTouchListener(new View.OnTouchListener() {
+            float dx, dy;
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        dx = signaturePreviewImageView.getX() - event.getRawX();
+                        dy = signaturePreviewImageView.getY() - event.getRawY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        signaturePreviewImageView.setX(event.getRawX() + dx);
+                        signaturePreviewImageView.setY(event.getRawY() + dy);
+                        return true;
+                }
+                return false;
+            }
+        });
 
         builder.setPositiveButton("Firmar", (dialog, which) -> {
+            // Guardar el bitmap de la firma actual para usarlo en el PDF
+            signaturePreviewBitmap = ((BitmapDrawable) signaturePreviewImageView.getDrawable()).getBitmap();
+            signatureStartX = signaturePreviewImageView.getX();
+            signatureStartY = signaturePreviewImageView.getY();
             addSignatureToPdf();
         });
 
         builder.setNegativeButton("Cancelar", (dialog, which) -> {
             dialog.dismiss();
-            areaSelected = false; // Allow re-selection if canceled
+            areaSelected = false;
         });
+
         builder.show();
     }
 
     private Bitmap createSignaturePreviewBitmap() {
         Bitmap signatureBitmap = Bitmap.createBitmap((int) (endX - startX), (int) (endY - startY), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
+
+        // Dibujar logo difuminado de fondo
+        Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo); // Asegúrate de tener un recurso drawable llamado logo
+        Paint logoPaint = new Paint();
+        logoPaint.setAlpha(50); // Hacer el logo difuminado
+        Rect logoRect = new Rect(0, 0, signatureBitmap.getWidth(), signatureBitmap.getHeight());
+        canvas.drawBitmap(logoBitmap, null, logoRect, logoPaint);
+
+        // Dibujar texto de la firma
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(getResources().getColor(android.R.color.holo_red_dark));
-        paint.setTextSize(16);
-        canvas.drawText("Firma Digital", 10, (signatureBitmap.getHeight() / 2), paint);
-        canvas.drawText("Fecha: " + java.time.LocalDateTime.now(), 10, (signatureBitmap.getHeight() / 2) + 20, paint);
+        paint.setColor(Color.BLACK);
+        paint.setTextSize(20);
+        String certificadoAlias = importedCertificateAlias != null ? importedCertificateAlias : "NOMBRE DEL CERTIFICADO";
+        String fecha = LocalDateTime.now().toString();
+
+        float textX = 10;
+        float textY = signatureBitmap.getHeight() / 4;
+
+        canvas.drawText("Firmado digitalmente por: " + certificadoAlias, textX, textY, paint);
+        textY += 30;
+        canvas.drawText("Fecha: " + fecha, textX, textY, paint);
+
         return signatureBitmap;
     }
 
     private void addSignatureToPdf() {
-        pdfCanvas.drawBitmap(createSignaturePreviewBitmap(), startX, startY, null);
-        pdfImageView.setImageBitmap(pdfBitmap);
-        Toast.makeText(this, "Firma añadida en el área seleccionada", Toast.LENGTH_SHORT).show();
+        if (signaturePreviewBitmap != null) {
+            pdfCanvas.drawBitmap(signaturePreviewBitmap, signatureStartX, signatureStartY, null);
+            pdfImageView.setImageBitmap(pdfBitmap);
+            Toast.makeText(this, "Firma añadida en el área seleccionada", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Error al añadir la firma", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void saveSignedPdf() {
@@ -249,11 +336,41 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 101 && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            try {
+                if (uri != null) {
+                    try (OutputStream outputStream = getContentResolver().openOutputStream(uri)) {
+                        PdfDocument document = new PdfDocument();
+                        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(pdfBitmap.getWidth(), pdfBitmap.getHeight(), 1).create();
+                        PdfDocument.Page page = document.startPage(pageInfo);
+                        Canvas canvas = page.getCanvas();
+                        canvas.drawBitmap(pdfBitmap, 0, 0, null);
+                        document.finishPage(page);
+                        document.writeTo(outputStream);
+                        document.close();
+                    }
+                    Toast.makeText(this, "Documento firmado guardado en: " + uri.getPath(), Toast.LENGTH_LONG).show();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Error guardando el documento firmado", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         closePdfRenderer();
     }
 }
+
+
+
+
 
 
 

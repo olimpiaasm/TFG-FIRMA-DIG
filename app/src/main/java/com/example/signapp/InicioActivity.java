@@ -51,6 +51,7 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
     private static final int CERTIFICATE_SELECT_REQUEST_CODE = 200;
     private static final String PREF_SELECTED_FILE_PATH = "selected_file_path";
     private static final String PREF_IMPORTED_CERTIFICATE_PATH_PREFIX = "imported_certificate_";
+    private static final String PREF_IMPORTED_CERTIFICATE_ALIAS = "imported_certificate_alias";
     private DatabaseHelper dbHelper;
     private TextView textViewUserName;
     private TextView textViewUserEmail;
@@ -58,6 +59,7 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
     private TextView textViewImportedCertificate;
     private String selectedFilePath;
     private String selectedCertificatePath;
+    private String importedCertificateAlias; // Añadido
     private PrivateKey privateKey;
     private Certificate[] certificateChain;
 
@@ -91,20 +93,10 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         String savedFilePath = preferences.getString(PREF_SELECTED_FILE_PATH, null);
         if (savedFilePath != null) {
             selectedFilePath = savedFilePath;
-
             textViewSelectedDocument.setVisibility(View.VISIBLE);
         }
 
-        Map<String, ?> allEntries = preferences.getAll();
-        for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
-            if (entry.getKey().startsWith(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX)) {
-                String certPath = (String) entry.getValue();
-                textViewImportedCertificate.setText("Certificado importado: " + certPath);
-                textViewImportedCertificate.setVisibility(View.VISIBLE);
-                selectedCertificatePath = certPath;
-                break;
-            }
-        }
+        loadImportedCertificate(preferences);
     }
 
     private void requestStoragePermission() {
@@ -256,7 +248,8 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
                             dialog.dismiss();
                             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(InicioActivity.this);
                             preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + System.currentTimeMillis(), selectedCertificatePath).apply();
-                            textViewImportedCertificate.setText("Certificado importado: " + selectedCertificatePath);
+                            preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_ALIAS, importedCertificateAlias).apply(); // Guardar el alias del certificado importado
+                            textViewImportedCertificate.setText("Certificado importado: " + importedCertificateAlias);
                             textViewImportedCertificate.setVisibility(View.VISIBLE);
                         } else {
                             input.setError("Clave incorrecta");
@@ -282,6 +275,7 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
             }
 
             if (alias != null) {
+                importedCertificateAlias = alias; // Guardar el alias del certificado importado
                 privateKey = (PrivateKey) keyStore.getKey(alias, password.toCharArray());
                 certificateChain = keyStore.getCertificateChain(alias);
 
@@ -313,21 +307,39 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + alias, filePath);
+        editor.putString(PREF_IMPORTED_CERTIFICATE_ALIAS, alias); // Guardar el alias del certificado importado
         editor.apply();
     }
 
+    private void loadImportedCertificate(SharedPreferences preferences) {
+        importedCertificateAlias = preferences.getString(PREF_IMPORTED_CERTIFICATE_ALIAS, null);
+        if (importedCertificateAlias != null) {
+            String certPath = preferences.getString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + importedCertificateAlias, null);
+            if (certPath != null) {
+                textViewImportedCertificate.setText("Certificado importado: " + importedCertificateAlias);
+                textViewImportedCertificate.setVisibility(View.VISIBLE);
+                selectedCertificatePath = certPath;
+            }
+        }
+    }
 
     private void signDocument() {
         if (selectedFilePath != null && !selectedFilePath.isEmpty()) {
             Log.d("InicioActivity", "Document path: " + selectedFilePath);
             Intent intent = new Intent(this, MostrarDocumentoActivity.class);
             intent.putExtra("documentPath", selectedFilePath);
+            intent.putExtra("importedCertificateAlias", importedCertificateAlias); // Pasar el alias del certificado importado
             startActivity(intent);
         } else {
             Toast.makeText(this, "Por favor, seleccione un documento primero.", Toast.LENGTH_SHORT).show();
         }
     }
 }
+
+
+
+
+
 
 
 
