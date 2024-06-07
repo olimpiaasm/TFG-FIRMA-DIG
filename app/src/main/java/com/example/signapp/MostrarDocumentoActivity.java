@@ -1,7 +1,5 @@
 package com.example.signapp;
 
-import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -11,13 +9,11 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.pdf.PdfDocument;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -36,11 +32,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.cert.Certificate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class MostrarDocumentoActivity extends AppCompatActivity {
 
@@ -55,15 +49,16 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     private String selectedCertificatePath;
     private String importedCertificateAlias;
     private String documentName;
-    private float startX, startY, endX, endY;
     private float signatureStartX, signatureStartY;
     private Bitmap pdfBitmap;
     private Canvas pdfCanvas;
     private Paint paint;
-    private View selectionOverlay;
-    private boolean areaSelected = false; // Flag to control area selection
     private Bitmap signaturePreviewBitmap;
-    private float signatureX, signatureY;
+    private float scale = 1.0f; // Escala de la firma
+    private ImageView signaturePreviewImageView; // Declaración de la vista de la firma
+    private ImageView documentPreviewImageView; // Declaración de la vista del documento
+    private SeekBar scaleSeekBar;
+    private SeekBar positionSeekBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,17 +70,13 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         saveFab = findViewById(R.id.save_fab);
 
         String documentPath = getIntent().getStringExtra("documentPath");
+        importedCertificateAlias = getIntent().getStringExtra("importedCertificateAlias"); // Obtener el alias del certificado importado
         documentName = new File(documentPath).getName(); // Get the document name
         openPdfRenderer(documentPath);
         showPage(0); // Muestra la primera página
 
         fab.setOnClickListener(view -> {
-            if (!areaSelected) {
-                Toast.makeText(this, "Seleccionar área en el PDF para firmar", Toast.LENGTH_SHORT).show();
-                enablePdfSignatureMode();
-            } else {
-                Toast.makeText(this, "Área ya seleccionada. Por favor, firme el documento o cancele la selección.", Toast.LENGTH_SHORT).show();
-            }
+            showCertificateSelectionDialog();
         });
 
         saveFab.setOnClickListener(view -> {
@@ -96,21 +87,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(3);
         paint.setColor(getResources().getColor(android.R.color.holo_blue_light));
-
-        selectionOverlay = new View(this) {
-            @Override
-            protected void onDraw(Canvas canvas) {
-                super.onDraw(canvas);
-                if (startX != endX && startY != endY) {
-                    canvas.drawRect(startX, startY, endX, endY, paint);
-                }
-            }
-        };
-        addContentView(selectionOverlay, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-
-        // Obtener alias del certificado importado
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        importedCertificateAlias = preferences.getString(PREF_IMPORTED_CERTIFICATE_ALIAS, null);
     }
 
     private void openPdfRenderer(String filePath) {
@@ -153,31 +129,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         pdfImageView.setImageBitmap(pdfBitmap);
     }
 
-    private void enablePdfSignatureMode() {
-        pdfImageView.setOnTouchListener((v, event) -> {
-            if (areaSelected) return false; // Prevent further selection if area already selected
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    startX = event.getX();
-                    startY = event.getY();
-                    return true;
-                case MotionEvent.ACTION_MOVE:
-                    endX = event.getX();
-                    endY = event.getY();
-                    selectionOverlay.invalidate();
-                    return true;
-                case MotionEvent.ACTION_UP:
-                    endX = event.getX();
-                    endY = event.getY();
-                    selectionOverlay.invalidate();
-                    areaSelected = true;
-                    showCertificateSelectionDialog();
-                    return true;
-            }
-            return false;
-        });
-    }
-
     private void showCertificateSelectionDialog() {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -213,7 +164,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         builder.setNegativeButton("Cancelar", (dialog, which) -> {
             dialog.dismiss();
-            areaSelected = false; // Allow re-selection if canceled
         });
         builder.show();
     }
@@ -226,20 +176,26 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         View dialogView = inflater.inflate(R.layout.activity_firmadocumento, null);
         builder.setView(dialogView);
 
-        ImageView signaturePreviewImageView = dialogView.findViewById(R.id.signaturePreviewImageView);
-        SeekBar scaleSeekBar = dialogView.findViewById(R.id.scaleSeekBar);
+        documentPreviewImageView = dialogView.findViewById(R.id.documentPreviewImageView);
+        signaturePreviewImageView = dialogView.findViewById(R.id.signaturePreviewImageView);
+        scaleSeekBar = dialogView.findViewById(R.id.scaleSeekBar);
+        positionSeekBar = dialogView.findViewById(R.id.positionSeekBar);
+
+        documentPreviewImageView.setImageBitmap(pdfBitmap);
 
         Bitmap signatureBitmap = createSignaturePreviewBitmap();
+        signaturePreviewBitmap = signatureBitmap;
         signaturePreviewImageView.setImageBitmap(signatureBitmap);
 
         scaleSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                float scale = 1 + (progress / 50.0f);
+                scale = 1 + (progress / 50.0f); // Actualizar escala
                 Matrix matrix = new Matrix();
                 matrix.postScale(scale, scale);
                 Bitmap scaledBitmap = Bitmap.createBitmap(signatureBitmap, 0, 0, signatureBitmap.getWidth(), signatureBitmap.getHeight(), matrix, true);
                 signaturePreviewImageView.setImageBitmap(scaledBitmap);
+                signaturePreviewBitmap = scaledBitmap;
             }
 
             @Override
@@ -249,27 +205,22 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
-        signaturePreviewImageView.setOnTouchListener(new View.OnTouchListener() {
-            float dx, dy;
+        positionSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        dx = signaturePreviewImageView.getX() - event.getRawX();
-                        dy = signaturePreviewImageView.getY() - event.getRawY();
-                        return true;
-                    case MotionEvent.ACTION_MOVE:
-                        signaturePreviewImageView.setX(event.getRawX() + dx);
-                        signaturePreviewImageView.setY(event.getRawY() + dy);
-                        return true;
-                }
-                return false;
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float newY = progress * (documentPreviewImageView.getHeight() / 100.0f);
+                signaturePreviewImageView.setY(newY);
             }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
         builder.setPositiveButton("Firmar", (dialog, which) -> {
-            // Guardar el bitmap de la firma actual para usarlo en el PDF
-            signaturePreviewBitmap = ((BitmapDrawable) signaturePreviewImageView.getDrawable()).getBitmap();
+            // Guardar las coordenadas y el tamaño de la firma para usarlo en el PDF
             signatureStartX = signaturePreviewImageView.getX();
             signatureStartY = signaturePreviewImageView.getY();
             addSignatureToPdf();
@@ -277,14 +228,13 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         builder.setNegativeButton("Cancelar", (dialog, which) -> {
             dialog.dismiss();
-            areaSelected = false;
         });
 
         builder.show();
     }
 
     private Bitmap createSignaturePreviewBitmap() {
-        Bitmap signatureBitmap = Bitmap.createBitmap((int) (endX - startX), (int) (endY - startY), Bitmap.Config.ARGB_8888);
+        Bitmap signatureBitmap = Bitmap.createBitmap(300, 100, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
 
         // Dibujar logo difuminado de fondo
@@ -303,7 +253,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         String fecha = LocalDateTime.now().toString();
 
         float textX = 10;
-        float textY = signatureBitmap.getHeight() / 4;
+        float textY = signatureBitmap.getHeight() / 2;
 
         canvas.drawText("Firmado digitalmente por: " + certificadoAlias, textX, textY, paint);
         textY += 30;
@@ -314,7 +264,10 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
     private void addSignatureToPdf() {
         if (signaturePreviewBitmap != null) {
-            pdfCanvas.drawBitmap(signaturePreviewBitmap, signatureStartX, signatureStartY, null);
+            // Aplicar escala y posición de la firma
+            Matrix matrix = new Matrix();
+            matrix.postTranslate(signatureStartX, signatureStartY);
+            pdfCanvas.drawBitmap(signaturePreviewBitmap, matrix, null);
             pdfImageView.setImageBitmap(pdfBitmap);
             Toast.makeText(this, "Firma añadida en el área seleccionada", Toast.LENGTH_SHORT).show();
         } else {
@@ -367,6 +320,13 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         closePdfRenderer();
     }
 }
+
+
+
+
+
+
+
 
 
 

@@ -61,7 +61,7 @@ public class RegistroActivity extends AppCompatActivity {
                         // Registro exitoso
                         Toast.makeText(RegistroActivity.this, "Registro exitoso", Toast.LENGTH_SHORT).show();
                         // Redirige al usuario a la actividad de inicio de sesión
-                        Intent intent = new Intent(RegistroActivity.this, MainActivity.class);
+                        Intent intent = new Intent(RegistroActivity.this, LoginActivity.class);
                         startActivity(intent);
                     } else {
                         // Error en el registro
