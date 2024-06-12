@@ -15,9 +15,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.SeekBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -27,7 +28,6 @@ import androidx.preference.PreferenceManager;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.LocalDateTime;
@@ -55,9 +55,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     private float scale = 1.0f; // Escala de la firma
     private ImageView signaturePreviewImageView; // Declaración de la vista de la firma
     private ImageView documentPreviewImageView; // Declaración de la vista del documento
-    private SeekBar scaleSeekBar;
-    private SeekBar verticalSeekBar;
-    private SeekBar horizontalSeekBar;
+    private ScaleGestureDetector scaleGestureDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -177,9 +175,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         documentPreviewImageView = dialogView.findViewById(R.id.documentPreviewImageView);
         signaturePreviewImageView = dialogView.findViewById(R.id.signaturePreviewImageView);
-        scaleSeekBar = dialogView.findViewById(R.id.scaleSeekBar);
-        verticalSeekBar = dialogView.findViewById(R.id.verticalSeekBar);
-        horizontalSeekBar = dialogView.findViewById(R.id.horizontalSeekBar);
 
         documentPreviewImageView.setImageBitmap(pdfBitmap);
 
@@ -187,49 +182,43 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         signaturePreviewBitmap = signatureBitmap;
         signaturePreviewImageView.setImageBitmap(signatureBitmap);
 
-        scaleSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        signaturePreviewImageView.setOnTouchListener(new View.OnTouchListener() {
+            float dX, dY;
+            float startX, startY;
+
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                scale = 1 + (progress / 50.0f); // Actualizar escala
-                Matrix matrix = new Matrix();
-                matrix.postScale(scale, scale);
-                Bitmap scaledBitmap = Bitmap.createBitmap(signatureBitmap, 0, 0, signatureBitmap.getWidth(), signatureBitmap.getHeight(), matrix, true);
-                signaturePreviewImageView.setImageBitmap(scaledBitmap);
+            public boolean onTouch(View view, MotionEvent event) {
+                scaleGestureDetector.onTouchEvent(event);
+
+                switch (event.getAction() & MotionEvent.ACTION_MASK) {
+                    case MotionEvent.ACTION_DOWN:
+                        dX = view.getX() - event.getRawX();
+                        dY = view.getY() - event.getRawY();
+                        startX = view.getScaleX();
+                        startY = view.getScaleY();
+                        break;
+
+                    case MotionEvent.ACTION_MOVE:
+                        view.animate()
+                                .x(event.getRawX() + dX)
+                                .y(event.getRawY() + dY)
+                                .setDuration(0)
+                                .start();
+                        break;
+                }
+                return true;
             }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
-        verticalSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        scaleGestureDetector = new ScaleGestureDetector(this, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                float newY = progress * (documentPreviewImageView.getHeight() / 100.0f);
-                signaturePreviewImageView.setY(newY);
+            public boolean onScale(ScaleGestureDetector detector) {
+                scale *= detector.getScaleFactor();
+                scale = Math.max(0.1f, Math.min(scale, 5.0f)); // Limitar la escala
+                signaturePreviewImageView.setScaleX(scale);
+                signaturePreviewImageView.setScaleY(scale);
+                return true;
             }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        horizontalSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                float newX = progress * (documentPreviewImageView.getWidth() / 100.0f);
-                signaturePreviewImageView.setX(newX);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
         builder.setPositiveButton("Firmar", (dialog, which) -> {
@@ -247,40 +236,68 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     }
 
     private Bitmap createSignaturePreviewBitmap() {
-        // Crear un bitmap más grande y cuadrado para la firma
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean includeNombre = preferences.getBoolean("include_nombre", true);
+        boolean includeFecha = preferences.getBoolean("include_fecha", true);
+        boolean includeLogo = preferences.getBoolean("include_logo", true);
+        String nombre = preferences.getString("signature_name", "Nombre del Certificado");
+
         int width = 400;
-        int height = 400;
+        int height = 200;
         Bitmap signatureBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
 
-        // Dibujar logo difuminado de fondo
-        Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo); // Asegúrate de tener un recurso drawable llamado logo
-        Paint logoPaint = new Paint();
-        logoPaint.setAlpha(50); // Hacer el logo difuminado
-        int logoSize = Math.min(width, height) / 2; // Ajustar el tamaño del logo
-        Rect logoRect = new Rect((width - logoSize) / 2, (height - logoSize) / 4, (width + logoSize) / 2, (height + logoSize) / 4);
-        canvas.drawBitmap(logoBitmap, null, logoRect, logoPaint);
+        if (includeLogo) {
+            Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
+            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, width, height, true);
+            Paint logoPaint = new Paint();
+            logoPaint.setAlpha(50);
+            canvas.drawBitmap(scaledLogoBitmap, 0, 0, logoPaint);
+        }
 
-        // Dibujar texto de la firma
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.BLACK);
-        paint.setTextSize(30); // Aumentar el tamaño del texto para mayor visibilidad
+        paint.setTextSize(30);
 
-        String certificadoAlias = importedCertificateAlias != null ? importedCertificateAlias : "NOMBRE DEL CERTIFICADO";
-        String fecha = LocalDateTime.now().toString();
+        int textPadding = 10;
+        int lineHeight = (int) (paint.descent() - paint.ascent());
 
-        float textX = 10;
-        float textY = (height / 2) + (logoSize / 2); // Ajustar la posición del texto
+        if (includeNombre) {
+            drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, textPadding + lineHeight, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, nombre, textPadding, textPadding + 3 * lineHeight, width - 2 * textPadding);
+        }
 
-        canvas.drawText("Firmado digitalmente por:", textX, textY, paint);
-        textY += 40; // Aumentar la distancia entre líneas de texto
-        canvas.drawText(certificadoAlias, textX, textY, paint);
-        textY += 40;
-        canvas.drawText("Fecha: " + fecha, textX, textY, paint);
+        if (includeFecha) {
+            String fecha = LocalDateTime.now().toString();
+            drawTextWithWrap(canvas, paint, "Fecha: " + fecha, textPadding, textPadding + 5 * lineHeight, width - 2 * textPadding);
+        }
 
         return signatureBitmap;
     }
+
+    private void drawTextWithWrap(Canvas canvas, Paint paint, String text, float x, float y, float maxWidth) {
+        int lineHeight = (int) (paint.descent() - paint.ascent());
+        float lineY = y;
+        String[] words = text.split(" ");
+        StringBuilder line = new StringBuilder();
+
+        for (String word : words) {
+            String testLine = line + word + " ";
+            float testWidth = paint.measureText(testLine);
+            if (testWidth > maxWidth) {
+                canvas.drawText(line.toString(), x, lineY, paint);
+                line = new StringBuilder(word + " ");
+                lineY += lineHeight;
+            } else {
+                line.append(word).append(" ");
+            }
+        }
+        canvas.drawText(line.toString(), x, lineY, paint);
+    }
+
+
+
 
 
     private void addSignatureToPdf() {
@@ -342,6 +359,8 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         closePdfRenderer();
     }
 }
+
+
 
 
 
