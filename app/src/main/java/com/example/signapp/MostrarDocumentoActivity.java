@@ -15,9 +15,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Toast;
@@ -58,7 +56,8 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     private ImageView signaturePreviewImageView; // Declaración de la vista de la firma
     private ImageView documentPreviewImageView; // Declaración de la vista del documento
     private SeekBar scaleSeekBar;
-    private SeekBar positionSeekBar;
+    private SeekBar verticalSeekBar;
+    private SeekBar horizontalSeekBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -179,7 +178,8 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         documentPreviewImageView = dialogView.findViewById(R.id.documentPreviewImageView);
         signaturePreviewImageView = dialogView.findViewById(R.id.signaturePreviewImageView);
         scaleSeekBar = dialogView.findViewById(R.id.scaleSeekBar);
-        positionSeekBar = dialogView.findViewById(R.id.positionSeekBar);
+        verticalSeekBar = dialogView.findViewById(R.id.verticalSeekBar);
+        horizontalSeekBar = dialogView.findViewById(R.id.horizontalSeekBar);
 
         documentPreviewImageView.setImageBitmap(pdfBitmap);
 
@@ -195,7 +195,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
                 matrix.postScale(scale, scale);
                 Bitmap scaledBitmap = Bitmap.createBitmap(signatureBitmap, 0, 0, signatureBitmap.getWidth(), signatureBitmap.getHeight(), matrix, true);
                 signaturePreviewImageView.setImageBitmap(scaledBitmap);
-                signaturePreviewBitmap = scaledBitmap;
             }
 
             @Override
@@ -205,11 +204,25 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
-        positionSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        verticalSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 float newY = progress * (documentPreviewImageView.getHeight() / 100.0f);
                 signaturePreviewImageView.setY(newY);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        horizontalSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float newX = progress * (documentPreviewImageView.getWidth() / 100.0f);
+                signaturePreviewImageView.setX(newX);
             }
 
             @Override
@@ -234,38 +247,47 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     }
 
     private Bitmap createSignaturePreviewBitmap() {
-        Bitmap signatureBitmap = Bitmap.createBitmap(300, 100, Bitmap.Config.ARGB_8888);
+        // Crear un bitmap más grande y cuadrado para la firma
+        int width = 400;
+        int height = 400;
+        Bitmap signatureBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
 
         // Dibujar logo difuminado de fondo
         Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo); // Asegúrate de tener un recurso drawable llamado logo
         Paint logoPaint = new Paint();
         logoPaint.setAlpha(50); // Hacer el logo difuminado
-        Rect logoRect = new Rect(0, 0, signatureBitmap.getWidth(), signatureBitmap.getHeight());
+        int logoSize = Math.min(width, height) / 2; // Ajustar el tamaño del logo
+        Rect logoRect = new Rect((width - logoSize) / 2, (height - logoSize) / 4, (width + logoSize) / 2, (height + logoSize) / 4);
         canvas.drawBitmap(logoBitmap, null, logoRect, logoPaint);
 
         // Dibujar texto de la firma
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.BLACK);
-        paint.setTextSize(20);
+        paint.setTextSize(30); // Aumentar el tamaño del texto para mayor visibilidad
+
         String certificadoAlias = importedCertificateAlias != null ? importedCertificateAlias : "NOMBRE DEL CERTIFICADO";
         String fecha = LocalDateTime.now().toString();
 
         float textX = 10;
-        float textY = signatureBitmap.getHeight() / 2;
+        float textY = (height / 2) + (logoSize / 2); // Ajustar la posición del texto
 
-        canvas.drawText("Firmado digitalmente por: " + certificadoAlias, textX, textY, paint);
-        textY += 30;
+        canvas.drawText("Firmado digitalmente por:", textX, textY, paint);
+        textY += 40; // Aumentar la distancia entre líneas de texto
+        canvas.drawText(certificadoAlias, textX, textY, paint);
+        textY += 40;
         canvas.drawText("Fecha: " + fecha, textX, textY, paint);
 
         return signatureBitmap;
     }
 
+
     private void addSignatureToPdf() {
         if (signaturePreviewBitmap != null) {
             // Aplicar escala y posición de la firma
             Matrix matrix = new Matrix();
+            matrix.postScale(scale, scale);
             matrix.postTranslate(signatureStartX, signatureStartY);
             pdfCanvas.drawBitmap(signaturePreviewBitmap, matrix, null);
             pdfImageView.setImageBitmap(pdfBitmap);
@@ -320,6 +342,9 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         closePdfRenderer();
     }
 }
+
+
+
 
 
 

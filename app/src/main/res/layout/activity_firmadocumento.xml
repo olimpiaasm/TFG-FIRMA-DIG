@@ -1,14 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="16dp"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="16dp">
 
     <FrameLayout
+        android:id="@+id/previewContainer"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true">
 
         <ImageView
             android:id="@+id/documentPreviewImageView"
@@ -30,17 +32,33 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:max="100"
-        android:progress="50" />
+        android:progress="50"
+        android:layout_alignParentBottom="true" />
 
     <SeekBar
-        android:id="@+id/positionSeekBar"
+        android:id="@+id/verticalSeekBar"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:max="100"
+        android:progress="50"
+        android:rotation="270"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="8dp" />
+
+    <SeekBar
+        android:id="@+id/horizontalSeekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:max="100"
         android:progress="50"
-        android:rotation="270"
-        android:layout_gravity="end" />
-</LinearLayout>
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="8dp" />
+</RelativeLayout>
+
+
+
+
+
 
 
 
