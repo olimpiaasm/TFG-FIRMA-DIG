@@ -247,30 +247,36 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         Bitmap signatureBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
 
+        canvas.drawColor(Color.WHITE); // Limpiar el canvas antes de dibujar
+
         if (includeLogo) {
             Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
-            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, width, height, true);
+            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, 100, 100, true);
             Paint logoPaint = new Paint();
             logoPaint.setAlpha(50);
-            canvas.drawBitmap(scaledLogoBitmap, 0, 0, logoPaint);
+            canvas.drawBitmap(scaledLogoBitmap, (width - scaledLogoBitmap.getWidth()) / 2, 20, logoPaint);
         }
 
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.BLACK);
-        paint.setTextSize(30);
+        paint.setTextSize(20);
 
         int textPadding = 10;
         int lineHeight = (int) (paint.descent() - paint.ascent());
 
+        int y = height - 3 * lineHeight;
+
         if (includeNombre) {
-            drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, textPadding + lineHeight, width - 2 * textPadding);
-            drawTextWithWrap(canvas, paint, nombre, textPadding, textPadding + 3 * lineHeight, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, y, width - 2 * textPadding);
+            y += lineHeight;
+            drawTextWithWrap(canvas, paint, nombre, textPadding, y, width - 2 * textPadding);
+            y += lineHeight;
         }
 
         if (includeFecha) {
             String fecha = LocalDateTime.now().toString();
-            drawTextWithWrap(canvas, paint, "Fecha: " + fecha, textPadding, textPadding + 5 * lineHeight, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, "Fecha: " + fecha, textPadding, y, width - 2 * textPadding);
         }
 
         return signatureBitmap;
@@ -295,10 +301,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         }
         canvas.drawText(line.toString(), x, lineY, paint);
     }
-
-
-
-
 
     private void addSignatureToPdf() {
         if (signaturePreviewBitmap != null) {
@@ -359,6 +361,8 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         closePdfRenderer();
     }
 }
+
+
 
 
 

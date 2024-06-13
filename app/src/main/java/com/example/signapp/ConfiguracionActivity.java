@@ -23,6 +23,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.navigation.NavigationView;
 
+import java.io.File;
 import java.time.LocalDateTime;
 
 public class ConfiguracionActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
@@ -36,6 +37,8 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
     private CheckBox checkBoxLogo;
     private EditText editTextNombre;
     private ImageView imageViewPreview;
+    private String documentName;
+    private String certificateName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,13 +60,11 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         Intent intent = getIntent();
         String filePath = intent.getStringExtra("filePath");
         String certificatePath = intent.getStringExtra("certificatePath");
+        documentName = filePath != null ? new File(filePath).getName() : "Documento no seleccionado";
+        certificateName = certificatePath != null ? new File(certificatePath).getName() : "Certificado no seleccionado";
 
-        if (filePath != null) {
-            textViewRutaDocumento.setText(filePath);
-        }
-        if (certificatePath != null) {
-            textViewRutaCertificate.setText(certificatePath);
-        }
+        textViewRutaDocumento.setText(filePath != null ? filePath : "");
+        textViewRutaCertificate.setText(certificatePath != null ? certificatePath : "");
 
         // Cargar las preferencias
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -73,8 +74,9 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         editTextNombre.setText(preferences.getString("signature_name", "Nombre del Certificado"));
 
         // Mostrar vista previa de la firma
-        imageViewPreview.setImageBitmap(createSignaturePreviewBitmap());
+        updateSignaturePreview();
 
+        // Asignar listeners para los cambios en los CheckBox
         checkBoxNombre.setOnCheckedChangeListener((buttonView, isChecked) -> updateSignaturePreview());
         checkBoxFecha.setOnCheckedChangeListener((buttonView, isChecked) -> updateSignaturePreview());
         checkBoxLogo.setOnCheckedChangeListener((buttonView, isChecked) -> updateSignaturePreview());
@@ -111,37 +113,43 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         boolean includeNombre = preferences.getBoolean("include_nombre", true);
         boolean includeFecha = preferences.getBoolean("include_fecha", true);
         boolean includeLogo = preferences.getBoolean("include_logo", true);
-        String nombre = preferences.getString("signature_name", "Nombre del Certificado");
+        String nombre = editTextNombre.getText().toString();
 
         int width = 400;
         int height = 200;
         Bitmap signatureBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
 
+        canvas.drawColor(Color.WHITE); // Limpiar el canvas antes de dibujar
+
         if (includeLogo) {
             Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
-            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, width, height, true);
+            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, 100, 100, true);
             Paint logoPaint = new Paint();
             logoPaint.setAlpha(50);
-            canvas.drawBitmap(scaledLogoBitmap, 0, 0, logoPaint);
+            canvas.drawBitmap(scaledLogoBitmap, (width - scaledLogoBitmap.getWidth()) / 2, 20, logoPaint);
         }
 
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.BLACK);
-        paint.setTextSize(30);
+        paint.setTextSize(20);
 
         int textPadding = 10;
         int lineHeight = (int) (paint.descent() - paint.ascent());
 
+        int y = height - 3 * lineHeight;
+
         if (includeNombre) {
-            drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, textPadding + lineHeight, width - 2 * textPadding);
-            drawTextWithWrap(canvas, paint, nombre, textPadding, textPadding + 3 * lineHeight, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, y, width - 2 * textPadding);
+            y += lineHeight;
+            drawTextWithWrap(canvas, paint, nombre, textPadding, y, width - 2 * textPadding);
+            y += lineHeight;
         }
 
         if (includeFecha) {
             String fecha = LocalDateTime.now().toString();
-            drawTextWithWrap(canvas, paint, "Fecha: " + fecha, textPadding, textPadding + 5 * lineHeight, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, "Fecha: " + fecha, textPadding, y, width - 2 * textPadding);
         }
 
         return signatureBitmap;
