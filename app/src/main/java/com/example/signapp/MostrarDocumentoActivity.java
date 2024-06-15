@@ -8,7 +8,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.graphics.pdf.PdfDocument;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
@@ -178,7 +177,8 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         documentPreviewImageView.setImageBitmap(pdfBitmap);
 
-        Bitmap signatureBitmap = createSignaturePreviewBitmap();
+        // Crear la firma actualizada con el nombre del documento y el certificado
+        Bitmap signatureBitmap = createUpdatedSignatureBitmap();
         signaturePreviewBitmap = signatureBitmap;
         signaturePreviewImageView.setImageBitmap(signatureBitmap);
 
@@ -235,15 +235,18 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private Bitmap createSignaturePreviewBitmap() {
+    private Bitmap createUpdatedSignatureBitmap() {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean includeNombre = preferences.getBoolean("include_nombre", true);
         boolean includeFecha = preferences.getBoolean("include_fecha", true);
         boolean includeLogo = preferences.getBoolean("include_logo", true);
-        String nombre = preferences.getString("signature_name", "Nombre del Certificado");
+
+        // Obtener el nombre del documento y el alias del certificado importado
+        String nombreDocumento = documentName;
+        String nombreCertificado = importedCertificateAlias != null ? importedCertificateAlias : "Certificado no seleccionado";
 
         int width = 400;
-        int height = 200;
+        int height = 300;  // Aumentado el alto para permitir más texto
         Bitmap signatureBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
 
@@ -265,13 +268,13 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         int textPadding = 10;
         int lineHeight = (int) (paint.descent() - paint.ascent());
 
-        int y = height - 3 * lineHeight;
+        int y = height - 5 * lineHeight;  // Ajuste para acomodar más líneas de texto
 
         if (includeNombre) {
-            drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, y, width - 2 * textPadding);
-            y += lineHeight;
-            drawTextWithWrap(canvas, paint, nombre, textPadding, y, width - 2 * textPadding);
-            y += lineHeight;
+            drawTextWithWrap(canvas, paint, "Firmado digitalmente por: " + nombreCertificado, textPadding, y, width - 2 * textPadding);
+            y += lineHeight + 20;  // Añadir espacio extra entre las líneas
+            drawTextWithWrap(canvas, paint, "Nombre del documento: " + nombreDocumento, textPadding, y, width - 2 * textPadding);
+            y += lineHeight + 20;  // Añadir espacio extra entre las líneas
         }
 
         if (includeFecha) {
@@ -281,6 +284,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         return signatureBitmap;
     }
+
 
     private void drawTextWithWrap(Canvas canvas, Paint paint, String text, float x, float y, float maxWidth) {
         int lineHeight = (int) (paint.descent() - paint.ascent());
@@ -361,6 +365,10 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         closePdfRenderer();
     }
 }
+
+
+
+
 
 
 

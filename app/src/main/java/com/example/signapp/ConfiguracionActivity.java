@@ -23,7 +23,6 @@ import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.navigation.NavigationView;
 
-import java.io.File;
 import java.time.LocalDateTime;
 
 public class ConfiguracionActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
@@ -37,8 +36,6 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
     private CheckBox checkBoxLogo;
     private EditText editTextNombre;
     private ImageView imageViewPreview;
-    private String documentName;
-    private String certificateName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +57,6 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         Intent intent = getIntent();
         String filePath = intent.getStringExtra("filePath");
         String certificatePath = intent.getStringExtra("certificatePath");
-        documentName = filePath != null ? new File(filePath).getName() : "Documento no seleccionado";
-        certificateName = certificatePath != null ? new File(certificatePath).getName() : "Certificado no seleccionado";
 
         textViewRutaDocumento.setText(filePath != null ? filePath : "");
         textViewRutaCertificate.setText(certificatePath != null ? certificatePath : "");
@@ -71,7 +66,7 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         checkBoxNombre.setChecked(preferences.getBoolean("include_nombre", true));
         checkBoxFecha.setChecked(preferences.getBoolean("include_fecha", true));
         checkBoxLogo.setChecked(preferences.getBoolean("include_logo", true));
-        editTextNombre.setText(preferences.getString("signature_name", "Nombre del Certificado"));
+        editTextNombre.setText(preferences.getString("signature_name", ""));
 
         // Mostrar vista previa de la firma
         updateSignaturePreview();
@@ -109,10 +104,9 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
     }
 
     private Bitmap createSignaturePreviewBitmap() {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean includeNombre = preferences.getBoolean("include_nombre", true);
-        boolean includeFecha = preferences.getBoolean("include_fecha", true);
-        boolean includeLogo = preferences.getBoolean("include_logo", true);
+        boolean includeNombre = checkBoxNombre.isChecked();
+        boolean includeFecha = checkBoxFecha.isChecked();
+        boolean includeLogo = checkBoxLogo.isChecked();
         String nombre = editTextNombre.getText().toString();
 
         int width = 400;
@@ -138,18 +132,17 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         int textPadding = 10;
         int lineHeight = (int) (paint.descent() - paint.ascent());
 
-        int y = height - 3 * lineHeight;
+        int y = 140; // Espacio superior para el logo
 
         if (includeNombre) {
             drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, y, width - 2 * textPadding);
             y += lineHeight;
-            drawTextWithWrap(canvas, paint, nombre, textPadding, y, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, "Nombre del documento: " + nombre, textPadding, y, width - 2 * textPadding);
             y += lineHeight;
         }
 
         if (includeFecha) {
-            String fecha = LocalDateTime.now().toString();
-            drawTextWithWrap(canvas, paint, "Fecha: " + fecha, textPadding, y, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, "Fecha: ", textPadding, y, width - 2 * textPadding);
         }
 
         return signatureBitmap;
@@ -167,13 +160,14 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
             if (testWidth > maxWidth) {
                 canvas.drawText(line.toString(), x, lineY, paint);
                 line = new StringBuilder(word + " ");
-                lineY += lineHeight;
+                lineY += lineHeight + 10;  // Añadir espacio extra entre las líneas
             } else {
                 line.append(word).append(" ");
             }
         }
         canvas.drawText(line.toString(), x, lineY, paint);
     }
+
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
@@ -190,6 +184,14 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         return true;
     }
 }
+
+
+
+
+
+
+
+
 
 
 
