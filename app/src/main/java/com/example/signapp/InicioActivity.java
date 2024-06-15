@@ -33,7 +33,6 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.Enumeration;
-import java.util.Map;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -55,8 +54,6 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
     private DatabaseHelper dbHelper;
     private TextView textViewUserName;
     private TextView textViewUserEmail;
-    private TextView textViewSelectedDocument;
-    private TextView textViewImportedCertificate;
     private String selectedFilePath;
     private String selectedCertificatePath;
     private String importedCertificateAlias; // Añadido
@@ -77,8 +74,6 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         dbHelper = new DatabaseHelper(this);
         textViewUserName = findViewById(R.id.button2);
         textViewUserEmail = findViewById(R.id.button3);
-        textViewSelectedDocument = findViewById(R.id.textViewSelectedDocument);
-        textViewImportedCertificate = findViewById(R.id.textViewSelectedCertificate);
 
         Button buttonSelectFile = findViewById(R.id.button2);
         buttonSelectFile.setOnClickListener(v -> selectFile(FILE_SELECT_REQUEST_CODE));
@@ -93,7 +88,6 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         String savedFilePath = preferences.getString(PREF_SELECTED_FILE_PATH, null);
         if (savedFilePath != null) {
             selectedFilePath = savedFilePath;
-            textViewSelectedDocument.setVisibility(View.VISIBLE);
         }
 
         loadImportedCertificate(preferences);
@@ -147,10 +141,9 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
                 String filePath = getPathFromUri(uri);
                 if (requestCode == FILE_SELECT_REQUEST_CODE) {
                     selectedFilePath = filePath;
-                    textViewSelectedDocument.setText("Documento seleccionado: " + getFileName(uri));
-                    textViewSelectedDocument.setVisibility(View.VISIBLE);
                     SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
                     preferences.edit().putString(PREF_SELECTED_FILE_PATH, selectedFilePath).apply();
+                    Toast.makeText(this, "Documento seleccionado correctamente", Toast.LENGTH_SHORT).show();  // Mostrar mensaje de confirmación
                 } else if (requestCode == CERTIFICATE_SELECT_REQUEST_CODE) {
                     selectedCertificatePath = filePath;
                     showPasswordDialog();
@@ -249,8 +242,7 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
                             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(InicioActivity.this);
                             preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + System.currentTimeMillis(), selectedCertificatePath).apply();
                             preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_ALIAS, importedCertificateAlias).apply(); // Guardar el alias del certificado importado
-                            textViewImportedCertificate.setText("Certificado importado: " + importedCertificateAlias);
-                            textViewImportedCertificate.setVisibility(View.VISIBLE);
+                            Toast.makeText(InicioActivity.this, "Certificado importado correctamente", Toast.LENGTH_SHORT).show();  // Mostrar mensaje de confirmación
                         } else {
                             input.setError("Clave incorrecta");
                         }
@@ -316,8 +308,6 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         if (importedCertificateAlias != null) {
             String certPath = preferences.getString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + importedCertificateAlias, null);
             if (certPath != null) {
-                textViewImportedCertificate.setText("Certificado importado: " + importedCertificateAlias);
-                textViewImportedCertificate.setVisibility(View.VISIBLE);
                 selectedCertificatePath = certPath;
             }
         }
@@ -335,6 +325,8 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         }
     }
 }
+
+
 
 
 

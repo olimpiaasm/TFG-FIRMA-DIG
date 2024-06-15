@@ -311,7 +311,20 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
             // Aplicar escala y posición de la firma
             Matrix matrix = new Matrix();
             matrix.postScale(scale, scale);
-            matrix.postTranslate(signatureStartX, signatureStartY);
+
+            // Convertir las coordenadas de la vista previa a las coordenadas del PDF
+            float pdfWidth = currentPage.getWidth();
+            float pdfHeight = currentPage.getHeight();
+            float previewWidth = documentPreviewImageView.getWidth();
+            float previewHeight = documentPreviewImageView.getHeight();
+
+            float xRatio = pdfWidth / previewWidth;
+            float yRatio = pdfHeight / previewHeight;
+
+            float finalX = signatureStartX * xRatio;
+            float finalY = signatureStartY * yRatio;
+
+            matrix.postTranslate(finalX, finalY);
             pdfCanvas.drawBitmap(signaturePreviewBitmap, matrix, null);
             pdfImageView.setImageBitmap(pdfBitmap);
             Toast.makeText(this, "Firma añadida en el área seleccionada", Toast.LENGTH_SHORT).show();
@@ -365,6 +378,8 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         closePdfRenderer();
     }
 }
+
+
 
 
 

@@ -137,7 +137,7 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         if (includeNombre) {
             drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, y, width - 2 * textPadding);
             y += lineHeight;
-            drawTextWithWrap(canvas, paint, "Nombre del documento: " + nombre, textPadding, y, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, "Nombre del documento: ", textPadding, y, width - 2 * textPadding);
             y += lineHeight;
         }
 
@@ -184,6 +184,7 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         return true;
     }
 }
+
 
 
 
