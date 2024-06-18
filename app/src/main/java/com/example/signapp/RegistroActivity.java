@@ -2,20 +2,13 @@ package com.example.signapp;
 
 import android.content.ContentValues;
 import android.content.Intent;
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
-import androidx.annotation.NonNull;
-
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 public class RegistroActivity extends AppCompatActivity {
     private EditText editTextName;
@@ -24,8 +17,6 @@ public class RegistroActivity extends AppCompatActivity {
     private Button buttonRegister;
     private Button buttonLogin;
     private DatabaseHelper dbHelper;
-
-    private static final int PERMISSION_REQUEST_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +30,6 @@ public class RegistroActivity extends AppCompatActivity {
         buttonLogin = findViewById(R.id.buttonLogin);
         dbHelper = new DatabaseHelper(this);
 
-
         buttonRegister.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -47,25 +37,29 @@ public class RegistroActivity extends AppCompatActivity {
                 String email = editTextEmail.getText().toString();
                 String password = editTextPassword.getText().toString();
 
-                if(isValidInput(name, email, password)){
-                    SQLiteDatabase db = dbHelper.getWritableDatabase();
-                    ContentValues values = new ContentValues();
-                    values.put(DatabaseHelper.COLUMN_NAME, name);
-                    values.put(DatabaseHelper.COLUMN_EMAIL, email);
-                    values.put(DatabaseHelper.COLUMN_PASSWORD, password);
-
-                    long newRowId = db.insert(DatabaseHelper.TABLE_NAME, null, values);
-                    db.close();
-
-                    if (newRowId != -1) {
-                        // Registro exitoso
-                        Toast.makeText(RegistroActivity.this, "Registro exitoso", Toast.LENGTH_SHORT).show();
-                        // Redirige al usuario a la actividad de inicio de sesión
-                        Intent intent = new Intent(RegistroActivity.this, LoginActivity.class);
-                        startActivity(intent);
+                if (isValidInput(name, email, password)) {
+                    if (dbHelper.userExists(email)) {
+                        Toast.makeText(RegistroActivity.this, "Usuario ya creado", Toast.LENGTH_SHORT).show();
                     } else {
-                        // Error en el registro
-                        Toast.makeText(RegistroActivity.this, "Error en el registro", Toast.LENGTH_SHORT).show();
+                        SQLiteDatabase db = dbHelper.getWritableDatabase();
+                        ContentValues values = new ContentValues();
+                        values.put(DatabaseHelper.COLUMN_NAME, name);
+                        values.put(DatabaseHelper.COLUMN_EMAIL, email);
+                        values.put(DatabaseHelper.COLUMN_PASSWORD, password);
+
+                        long newRowId = db.insert(DatabaseHelper.TABLE_NAME, null, values);
+                        db.close();
+
+                        if (newRowId != -1) {
+                            // Registro exitoso
+                            Toast.makeText(RegistroActivity.this, "Registro exitoso", Toast.LENGTH_SHORT).show();
+                            // Redirige al usuario a la actividad de inicio de sesión
+                            Intent intent = new Intent(RegistroActivity.this, LoginActivity.class);
+                            startActivity(intent);
+                        } else {
+                            // Error en el registro
+                            Toast.makeText(RegistroActivity.this, "Error en el registro", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
             }
@@ -92,5 +86,5 @@ public class RegistroActivity extends AppCompatActivity {
         }
         return true;
     }
-
 }
+

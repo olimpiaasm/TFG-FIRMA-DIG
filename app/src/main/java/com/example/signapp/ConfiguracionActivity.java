@@ -1,5 +1,6 @@
 package com.example.signapp;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -9,33 +10,43 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.text.InputType;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
+import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.navigation.NavigationView;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class ConfiguracionActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private DrawerLayout drawerLayout;
     private NavigationView navigationView;
-    private TextView textViewRutaDocumento;
-    private TextView textViewRutaCertificate;
     private CheckBox checkBoxNombre;
     private CheckBox checkBoxFecha;
     private CheckBox checkBoxLogo;
     private EditText editTextNombre;
     private ImageView imageViewPreview;
+    private SharedPreferences preferences;
+    private List<String> certificados;
+
+    private static final String PREF_IMPORTED_CERTIFICATE_PATH_PREFIX = "imported_certificate_";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,32 +57,21 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        textViewRutaDocumento = findViewById(R.id.textViewRutaDocumento);
-        textViewRutaCertificate = findViewById(R.id.textViewRutaCertificate);
+        Button buttonManageCertificates = findViewById(R.id.buttonManageCertificates);
+        Button buttonSaveChanges = findViewById(R.id.buttonSaveChanges);
+
         checkBoxNombre = findViewById(R.id.checkBoxNombre);
         checkBoxFecha = findViewById(R.id.checkBoxFecha);
         checkBoxLogo = findViewById(R.id.checkBoxLogo);
         editTextNombre = findViewById(R.id.editTextNombre);
         imageViewPreview = findViewById(R.id.imageViewPreview);
 
-        Intent intent = getIntent();
-        String filePath = intent.getStringExtra("filePath");
-        String certificatePath = intent.getStringExtra("certificatePath");
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        loadPreferences();
 
-        textViewRutaDocumento.setText(filePath != null ? filePath : "");
-        textViewRutaCertificate.setText(certificatePath != null ? certificatePath : "");
+        buttonManageCertificates.setOnClickListener(v -> openManageCertificatesDialog());
+        buttonSaveChanges.setOnClickListener(v -> savePreferences());
 
-        // Cargar las preferencias
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        checkBoxNombre.setChecked(preferences.getBoolean("include_nombre", true));
-        checkBoxFecha.setChecked(preferences.getBoolean("include_fecha", true));
-        checkBoxLogo.setChecked(preferences.getBoolean("include_logo", true));
-        editTextNombre.setText(preferences.getString("signature_name", ""));
-
-        // Mostrar vista previa de la firma
-        updateSignaturePreview();
-
-        // Asignar listeners para los cambios en los CheckBox
         checkBoxNombre.setOnCheckedChangeListener((buttonView, isChecked) -> updateSignaturePreview());
         checkBoxFecha.setOnCheckedChangeListener((buttonView, isChecked) -> updateSignaturePreview());
         checkBoxLogo.setOnCheckedChangeListener((buttonView, isChecked) -> updateSignaturePreview());
@@ -81,22 +81,98 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
             }
         });
 
-        Button btnSave = findViewById(R.id.button2);
-        btnSave.setOnClickListener(v -> {
-            // Guardar las preferencias
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putBoolean("include_nombre", checkBoxNombre.isChecked());
-            editor.putBoolean("include_fecha", checkBoxFecha.isChecked());
-            editor.putBoolean("include_logo", checkBoxLogo.isChecked());
-            editor.putString("signature_name", editTextNombre.getText().toString());
-            editor.apply();
+        updateSignaturePreview();
+    }
 
-            // Volver a la actividad principal
-            Intent intentReturn = new Intent(ConfiguracionActivity.this, MostrarDocumentoActivity.class);
-            intentReturn.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intentReturn);
-            finish();
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.configuracion, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_datosusuario) {
+            openUserInfoActivity();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void openUserInfoActivity() {
+        Intent intent = new Intent(this, DatosUsuarioActivity.class);
+        startActivity(intent);
+    }
+
+    private void openManageCertificatesDialog() {
+        // Cargar los certificados importados
+        loadImportedCertificates();
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Lista de Certificados Importados");
+
+        // Crear un adaptador para la lista de certificados
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, certificados);
+        ListView listView = new ListView(this);
+        listView.setAdapter(adapter);
+
+        // Configurar el evento de clic en los elementos de la lista para eliminar certificados
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String alias = certificados.get(position);
+            showDeleteCertificateDialog(alias, adapter);
         });
+
+        builder.setView(listView);
+        builder.setNegativeButton("Cerrar", (dialog, which) -> dialog.dismiss());
+        builder.show();
+    }
+
+    private void showDeleteCertificateDialog(String alias, ArrayAdapter<String> adapter) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Eliminar Certificado");
+        builder.setMessage("¿Estás seguro de que deseas eliminar el certificado seleccionado?");
+        builder.setPositiveButton("Sí", (dialog, which) -> {
+            // Eliminar el certificado
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.remove(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + alias);
+            editor.apply();
+            loadImportedCertificates();
+            adapter.notifyDataSetChanged();
+            Toast.makeText(this, "Certificado eliminado", Toast.LENGTH_SHORT).show();
+        });
+        builder.setNegativeButton("No", (dialog, which) -> dialog.dismiss());
+        builder.show();
+    }
+
+    private void loadImportedCertificates() {
+        certificados = new ArrayList<>();
+        Map<String, ?> allEntries = preferences.getAll();
+        for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
+            if (entry.getKey().startsWith(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX)) {
+                certificados.add(entry.getKey().replace(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX, ""));
+            }
+        }
+    }
+
+    private void savePreferences() {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean("include_nombre", checkBoxNombre.isChecked());
+        editor.putBoolean("include_fecha", checkBoxFecha.isChecked());
+        editor.putBoolean("include_logo", checkBoxLogo.isChecked());
+        editor.putString("signature_name", editTextNombre.getText().toString());
+        editor.apply();
+
+        Toast.makeText(this, "Preferencias guardadas", Toast.LENGTH_SHORT).show();
+
+        // Volver a la actividad principal o hacer otra acción necesaria
+    }
+
+    private void loadPreferences() {
+        checkBoxNombre.setChecked(preferences.getBoolean("include_nombre", true));
+        checkBoxFecha.setChecked(preferences.getBoolean("include_fecha", true));
+        checkBoxLogo.setChecked(preferences.getBoolean("include_logo", true));
+        editTextNombre.setText(preferences.getString("signature_name", ""));
     }
 
     private void updateSignaturePreview() {
@@ -114,15 +190,7 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         Bitmap signatureBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
 
-        canvas.drawColor(Color.WHITE); // Limpiar el canvas antes de dibujar
-
-        if (includeLogo) {
-            Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
-            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, 100, 100, true);
-            Paint logoPaint = new Paint();
-            logoPaint.setAlpha(50);
-            canvas.drawBitmap(scaledLogoBitmap, (width - scaledLogoBitmap.getWidth()) / 2, 20, logoPaint);
-        }
+        canvas.drawColor(Color.WHITE);
 
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
@@ -132,12 +200,20 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         int textPadding = 10;
         int lineHeight = (int) (paint.descent() - paint.ascent());
 
-        int y = 140; // Espacio superior para el logo
+        if (includeLogo) {
+            Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
+            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, width, height, true);
+            Paint logoPaint = new Paint();
+            logoPaint.setAlpha(50);
+            canvas.drawBitmap(scaledLogoBitmap, 0, 0, logoPaint);
+        }
+
+        int y = 20;
 
         if (includeNombre) {
             drawTextWithWrap(canvas, paint, "Firmado digitalmente por:", textPadding, y, width - 2 * textPadding);
             y += lineHeight;
-            drawTextWithWrap(canvas, paint, "Nombre del documento: ", textPadding, y, width - 2 * textPadding);
+            drawTextWithWrap(canvas, paint, "Nombre del documento: " + nombre, textPadding, y, width - 2 * textPadding);
             y += lineHeight;
         }
 
@@ -160,14 +236,13 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
             if (testWidth > maxWidth) {
                 canvas.drawText(line.toString(), x, lineY, paint);
                 line = new StringBuilder(word + " ");
-                lineY += lineHeight + 10;  // Añadir espacio extra entre las líneas
+                lineY += lineHeight + 10;
             } else {
                 line.append(word).append(" ");
             }
         }
         canvas.drawText(line.toString(), x, lineY, paint);
     }
-
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
@@ -184,6 +259,10 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
         return true;
     }
 }
+
+
+
+
 
 
 

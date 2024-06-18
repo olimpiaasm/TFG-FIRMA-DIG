@@ -11,8 +11,9 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.InputType;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -39,6 +40,8 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.Enumeration;
 
+
+
 public class InicioActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private DrawerLayout drawerLayout;
@@ -56,10 +59,13 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
     private PrivateKey privateKey;
     private Certificate[] certificateChain;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_inicio);
+
+        NotificacionActivity.createNotificationChannel(this);
 
         drawerLayout = findViewById(R.id.drawer_layout);
         navigationView = findViewById(R.id.nav_view);
@@ -116,10 +122,19 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main, menu);
+        return true;
+    }
+
+
+    @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
 
         if (id == R.id.nav_inicio) {
+            // Acción cuando se selecciona el ítem de inicio
         } else if (id == R.id.nav_configuracion) {
             Intent intentConfig = new Intent(this, ConfiguracionActivity.class);
             intentConfig.putExtra("filePath", selectedFilePath);
@@ -228,26 +243,21 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         });
 
         final AlertDialog dialog = builder.create();
-        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-            @Override
-            public void onShow(DialogInterface dialogInterface) {
-                Button button = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-                button.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        String password = input.getText().toString();
-                        if (importCertificate(password)) {
-                            dialog.dismiss();
-                            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(InicioActivity.this);
-                            preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + System.currentTimeMillis(), selectedCertificatePath).apply();
-                            preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_ALIAS, importedCertificateAlias).apply(); // Guardar el alias del certificado importado
-                            Toast.makeText(InicioActivity.this, "Certificado importado correctamente", Toast.LENGTH_SHORT).show();  // Mostrar mensaje de confirmación
-                        } else {
-                            input.setError("Clave incorrecta");
-                        }
-                    }
-                });
-            }
+        dialog.setOnShowListener(dialogInterface -> {
+            Button button = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            button.setOnClickListener(v -> {
+                String password = input.getText().toString();
+                if (importCertificate(password)) {
+                    dialog.dismiss();
+                    SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(InicioActivity.this);
+                    preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + System.currentTimeMillis(), selectedCertificatePath).apply();
+                    preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_ALIAS, importedCertificateAlias).apply(); // Guardar el alias del certificado importado
+                    Toast.makeText(InicioActivity.this, "Certificado importado correctamente", Toast.LENGTH_SHORT).show();  // Mostrar mensaje de confirmación
+                    NotificacionActivity.showNotification(InicioActivity.this, "Certificado", "Certificado importado correctamente");
+                } else {
+                    input.setError("Clave incorrecta");
+                }
+            });
         });
         dialog.show();
     }
@@ -318,11 +328,18 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
             intent.putExtra("documentPath", selectedFilePath);
             intent.putExtra("importedCertificateAlias", importedCertificateAlias); // Pasar el alias del certificado importado
             startActivity(intent);
+            NotificacionActivity.showNotification(this, "Documento", "Documento firmado correctamente");
         } else {
             Toast.makeText(this, "Por favor, seleccione un documento primero.", Toast.LENGTH_SHORT).show();
         }
     }
 }
+
+
+
+
+
+
 
 
 

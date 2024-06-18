@@ -1,10 +1,12 @@
 package com.example.signapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -12,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 
 import java.util.concurrent.Executor;
 
@@ -20,8 +23,10 @@ public class LoginActivity extends AppCompatActivity {
     private EditText editTextPassword;
     private Button buttonLogin;
     private Button buttonRegister;
+    private TextView textViewForgotPassword;
     private ImageView imageViewBiometricLogin;
     private DatabaseHelper dbHelper;
+    private SharedPreferences preferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,19 +37,28 @@ public class LoginActivity extends AppCompatActivity {
         editTextPassword = findViewById(R.id.editTextText2);
         buttonLogin = findViewById(R.id.button);
         buttonRegister = findViewById(R.id.button1);
+        textViewForgotPassword = findViewById(R.id.textViewForgotPassword);
         imageViewBiometricLogin = findViewById(R.id.imageViewBiometricLogin);
 
         dbHelper = new DatabaseHelper(this);
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         buttonLogin.setOnClickListener(view -> {
             String email = editTextEmail.getText().toString();
             String password = editTextPassword.getText().toString();
 
             if (dbHelper.checkUser(email, password)) {
+                User user = dbHelper.getUser(email);
+                if (user != null) {
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putString("user_name", user.getName());
+                    editor.putString("user_email", user.getEmail());
+                    editor.apply();
+                }
                 Toast.makeText(LoginActivity.this, "Inicio de sesión exitoso", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(LoginActivity.this, InicioActivity.class);
                 startActivity(intent);
-                finish(); // Cierra la LoginActivity para que el usuario no pueda volver presionando 'atrás'
+                finish();
             } else {
                 Toast.makeText(LoginActivity.this, "Credenciales incorrectas", Toast.LENGTH_SHORT).show();
             }
@@ -52,6 +66,11 @@ public class LoginActivity extends AppCompatActivity {
 
         buttonRegister.setOnClickListener(view -> {
             Intent intent = new Intent(LoginActivity.this, RegistroActivity.class);
+            startActivity(intent);
+        });
+
+        textViewForgotPassword.setOnClickListener(view -> {
+            Intent intent = new Intent(LoginActivity.this, RecuperarContraseñaActivity.class);
             startActivity(intent);
         });
 
@@ -72,7 +91,6 @@ public class LoginActivity extends AppCompatActivity {
                     break;
             }
         });
-
     }
 
     private void showBiometricPrompt() {
@@ -109,6 +127,9 @@ public class LoginActivity extends AppCompatActivity {
         biometricPrompt.authenticate(promptInfo);
     }
 }
+
+
+
 
 
 

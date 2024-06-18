@@ -38,7 +38,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <Button
-            android:id="@+id/button2"
+            android:id="@+id/buttonSaveChanges"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="645dp"
@@ -49,31 +49,18 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <EditText
-            android:id="@+id/textViewRutaDocumento"
+
+        <Button
+            android:id="@+id/buttonManageCertificates"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="500dp"
-            android:ems="10"
-            android:hint="Ruta Documento"
-            android:inputType="text"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginTop="100dp"
+            android:text="Lista certificados importados"
+            app:layout_constraintBottom_toTopOf="@+id/imageView2"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <EditText
-            android:id="@+id/textViewRutaCertificate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="420dp"
-            android:ems="10"
-            android:hint="Ruta Certificado"
-            android:inputType="text"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/textView4"

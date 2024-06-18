@@ -67,7 +67,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         String documentPath = getIntent().getStringExtra("documentPath");
         importedCertificateAlias = getIntent().getStringExtra("importedCertificateAlias"); // Obtener el alias del certificado importado
-        documentName = new File(documentPath).getName(); // Get the document name
+        documentName = new File(documentPath).getName(); // Obtener el nombre del documento
         openPdfRenderer(documentPath);
         showPage(0); // Muestra la primera página
 
@@ -252,14 +252,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         canvas.drawColor(Color.WHITE); // Limpiar el canvas antes de dibujar
 
-        if (includeLogo) {
-            Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
-            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, 100, 100, true);
-            Paint logoPaint = new Paint();
-            logoPaint.setAlpha(50);
-            canvas.drawBitmap(scaledLogoBitmap, (width - scaledLogoBitmap.getWidth()) / 2, 20, logoPaint);
-        }
-
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.BLACK);
@@ -268,8 +260,18 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         int textPadding = 10;
         int lineHeight = (int) (paint.descent() - paint.ascent());
 
-        int y = height - 5 * lineHeight;  // Ajuste para acomodar más líneas de texto
+        // Dibuja el logo primero
+        if (includeLogo) {
+            Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
+            Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, width, height, true);
+            Paint logoPaint = new Paint();
+            logoPaint.setAlpha(50); // Opcional: hace el logo más translúcido
+            canvas.drawBitmap(scaledLogoBitmap, 0, 0, logoPaint);
+        }
 
+        int y = 20; // Posición inicial del texto
+
+        // Luego dibuja el texto sobre el logo
         if (includeNombre) {
             drawTextWithWrap(canvas, paint, "Firmado digitalmente por: " + nombreCertificado, textPadding, y, width - 2 * textPadding);
             y += lineHeight + 20;  // Añadir espacio extra entre las líneas
@@ -378,6 +380,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         closePdfRenderer();
     }
 }
+
 
 
 
