@@ -230,7 +230,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
             @Override
             public boolean onScale(ScaleGestureDetector detector) {
                 scale *= detector.getScaleFactor();
-                scale = Math.max(0.1f, Math.min(scale, 5.0f)); // Limitar la escala
+                scale = Math.max(0.1f, Math.min(scale, 5.0f));
                 signaturePreviewImageView.setScaleX(scale);
                 signaturePreviewImageView.setScaleY(scale);
                 return true;
@@ -238,7 +238,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         });
 
         builder.setPositiveButton("Firmar", (dialog, which) -> {
-            // Guardar las coordenadas y el tamaño de la firma para usarlo en el PDF
+
             signatureStartX = signaturePreviewImageView.getX();
             signatureStartY = signaturePreviewImageView.getY();
             addSignatureToPdf();

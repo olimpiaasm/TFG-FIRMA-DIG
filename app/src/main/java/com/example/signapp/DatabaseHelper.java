@@ -1,21 +1,11 @@
 package com.example.signapp;
 
-import android.app.Notification;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import androidx.preference.PreferenceManager;
-
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -176,11 +166,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Cursor cursor = db.query("certificates", columns, selection, selectionArgs, null, null, null);
 
         if (cursor != null && cursor.moveToFirst()) {
-            String salt = cursor.getString(cursor.getColumnIndex("salt"));
-            String hashedPassword = cursor.getString(cursor.getColumnIndex("hashedPassword"));
-            cursor.close();
-            db.close();
-            return new String[]{salt, hashedPassword};
+            int saltIndex = cursor.getColumnIndex("salt");
+            int hashedPasswordIndex = cursor.getColumnIndex("hashedPassword");
+
+            if (saltIndex >= 0 && hashedPasswordIndex >= 0) {
+                String salt = cursor.getString(saltIndex);
+                String hashedPassword = cursor.getString(hashedPasswordIndex);
+                cursor.close();
+                db.close();
+                return new String[]{salt, hashedPassword};
+            } else {
+                cursor.close();
+                db.close();
+                return null;
+            }
         } else {
             if (cursor != null) {
                 cursor.close();
@@ -189,6 +188,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             return null;
         }
     }
+
 
 }
 
