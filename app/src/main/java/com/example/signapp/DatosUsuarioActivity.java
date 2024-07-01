@@ -1,6 +1,5 @@
 package com.example.signapp;
 
-
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.InputType;
@@ -53,8 +52,14 @@ public class DatosUsuarioActivity extends AppCompatActivity {
     }
 
     private void saveUserData() {
+        String currentName = editTextName.getText().toString();
+        String currentEmail = editTextEmail.getText().toString();
+
         String newName = editTextName.getText().toString();
         String newEmail = editTextEmail.getText().toString();
+
+        boolean isNameUpdated = !newName.equals(currentName);
+        boolean isEmailUpdated = !newEmail.equals(userEmail);
 
         if (dbHelper.updateUser(userEmail, newName, newEmail)) {
             SharedPreferences.Editor editor = preferences.edit();
@@ -63,6 +68,17 @@ public class DatosUsuarioActivity extends AppCompatActivity {
             editor.apply();
 
             Toast.makeText(this, "Datos guardados", Toast.LENGTH_SHORT).show();
+
+            if (isNameUpdated) {
+                NotificacionActivity.showNotification(this, "Actualización de Usuario", "Nombre actualizado correctamente");
+            }
+
+            if (isEmailUpdated) {
+                NotificacionActivity.showNotification(this, "Actualización de Usuario", "Correo electrónico actualizado correctamente");
+            }
+
+            // Actualiza userEmail para reflejar el nuevo correo
+            userEmail = newEmail;
         } else {
             Toast.makeText(this, "Error al guardar datos", Toast.LENGTH_SHORT).show();
         }
@@ -81,6 +97,7 @@ public class DatosUsuarioActivity extends AppCompatActivity {
             // Guardar la nueva contraseña en la base de datos
             if (dbHelper.updateUserPassword(userEmail, newPassword)) {
                 Toast.makeText(this, "Contraseña actualizada", Toast.LENGTH_SHORT).show();
+                NotificacionActivity.showNotification(this, "Actualización de Usuario", "Contraseña actualizada correctamente");
             } else {
                 Toast.makeText(this, "Error al actualizar la contraseña", Toast.LENGTH_SHORT).show();
             }
@@ -90,6 +107,7 @@ public class DatosUsuarioActivity extends AppCompatActivity {
         builder.show();
     }
 }
+
 
 
 

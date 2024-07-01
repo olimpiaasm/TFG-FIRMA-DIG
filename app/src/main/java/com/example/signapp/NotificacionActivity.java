@@ -3,22 +3,36 @@ package com.example.signapp;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.SharedPreferences;
 import android.os.Build;
-import android.text.InputType;
-import android.widget.Button;
-import android.widget.EditText;
+import android.os.Bundle;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
-public class NotificacionActivity {
+import java.util.List;
+
+public class NotificacionActivity extends AppCompatActivity {
 
     private static final String CHANNEL_ID = "signapp_notifications";
     private static final String CHANNEL_NAME = "SignApp Notifications";
     private static final String CHANNEL_DESC = "Notifications for SignApp events";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_notificaciones);
+
+        createNotificationChannel(this);
+
+        ListView listView = findViewById(R.id.listViewNotifications);
+        List<String> notifications = AlmacenamientoNotificacion.getNotifications(this);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, notifications);
+        listView.setAdapter(adapter);
+    }
 
     public static void createNotificationChannel(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -38,7 +52,9 @@ public class NotificacionActivity {
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+
+        // Store notification for later display
+        AlmacenamientoNotificacion.addNotification(context, title + ": " + message);
     }
-
-
 }
+

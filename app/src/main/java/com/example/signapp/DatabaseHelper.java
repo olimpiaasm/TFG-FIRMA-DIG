@@ -3,11 +3,18 @@ package com.example.signapp;
 import android.app.Notification;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import androidx.preference.PreferenceManager;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
@@ -20,8 +27,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_NAME = "name";
     public static final String COLUMN_EMAIL = "email";
     public static final String COLUMN_PASSWORD = "password";
-    public static final String COLUMN_NOTIFICATION_TITLE = "title"; // Nueva columna
-    public static final String COLUMN_NOTIFICATION_MESSAGE = "message"; // Nueva columna
+    public static final String COLUMN_NOTIFICATION_TITLE = "title";
+    public static final String COLUMN_NOTIFICATION_MESSAGE = "message";
+    private static final String COLUMN_SALT = "salt";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -33,7 +41,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + COLUMN_NAME + " TEXT, "
                 + COLUMN_EMAIL + " TEXT, "
-                + COLUMN_PASSWORD + " TEXT);";
+                + COLUMN_PASSWORD + " TEXT, "
+                + COLUMN_SALT + " TEXT);";
 
         String createNotificationTable = "CREATE TABLE " + TABLE_NAME_NOTIFICATIONS + " ("
                 + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -43,6 +52,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(createUserTable);
         db.execSQL(createNotificationTable);
     }
+
 
 
     @Override
@@ -148,5 +158,41 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return result != -1;
     }
 
+    public void saveCertificateInfo(String alias, String salt, String hashedPassword) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("alias", alias);
+        values.put("salt", salt);
+        values.put("hashedPassword", hashedPassword);
+        db.insert("certificates", null, values);
+        db.close();
+    }
+
+    public String[] getCertificateInfo(String alias) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String[] columns = {"salt", "hashedPassword"};
+        String selection = "alias = ?";
+        String[] selectionArgs = {alias};
+        Cursor cursor = db.query("certificates", columns, selection, selectionArgs, null, null, null);
+
+        if (cursor != null && cursor.moveToFirst()) {
+            String salt = cursor.getString(cursor.getColumnIndex("salt"));
+            String hashedPassword = cursor.getString(cursor.getColumnIndex("hashedPassword"));
+            cursor.close();
+            db.close();
+            return new String[]{salt, hashedPassword};
+        } else {
+            if (cursor != null) {
+                cursor.close();
+            }
+            db.close();
+            return null;
+        }
+    }
 
 }
+
+
+
+
+

@@ -17,7 +17,9 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -32,6 +34,7 @@ import java.io.OutputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class MostrarDocumentoActivity extends AppCompatActivity {
 
@@ -43,6 +46,9 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     private ParcelFileDescriptor parcelFileDescriptor;
     private FloatingActionButton fab;
     private FloatingActionButton saveFab;
+    private Button buttonNext, buttonPrevious;
+    private TextView textPageNumber;
+    private int currentPageIndex = 0;
     private String selectedCertificatePath;
     private String importedCertificateAlias;
     private String documentName;
@@ -64,19 +70,32 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         pdfImageView = findViewById(R.id.pdfImageView);
         fab = findViewById(R.id.fab);
         saveFab = findViewById(R.id.save_fab);
+        buttonNext = findViewById(R.id.buttonNext);
+        buttonPrevious = findViewById(R.id.buttonPrevious);
+        textPageNumber = findViewById(R.id.textPageNumber);
 
         String documentPath = getIntent().getStringExtra("documentPath");
         importedCertificateAlias = getIntent().getStringExtra("importedCertificateAlias"); // Obtener el alias del certificado importado
         documentName = new File(documentPath).getName(); // Obtener el nombre del documento
         openPdfRenderer(documentPath);
-        showPage(0); // Muestra la primera página
+        showPage(currentPageIndex); // Muestra la primera página
 
-        fab.setOnClickListener(view -> {
-            showCertificateSelectionDialog();
+        fab.setOnClickListener(view -> showCertificateSelectionDialog());
+
+        saveFab.setOnClickListener(view -> saveSignedPdf());
+
+        buttonNext.setOnClickListener(v -> {
+            if (currentPageIndex < pdfRenderer.getPageCount() - 1) {
+                currentPageIndex++;
+                showPage(currentPageIndex);
+            }
         });
 
-        saveFab.setOnClickListener(view -> {
-            saveSignedPdf();
+        buttonPrevious.setOnClickListener(v -> {
+            if (currentPageIndex > 0) {
+                currentPageIndex--;
+                showPage(currentPageIndex);
+            }
         });
 
         paint = new Paint();
@@ -123,6 +142,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         currentPage.render(pdfBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
 
         pdfImageView.setImageBitmap(pdfBitmap);
+        textPageNumber.setText(String.format(Locale.getDefault(), "Página %d de %d", index + 1, pdfRenderer.getPageCount()));
     }
 
     private void showCertificateSelectionDialog() {
@@ -146,9 +166,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         certificatePathArray = certificatePaths.toArray(certificatePathArray);
 
         String[] finalCertificatePathArray = certificatePathArray;
-        builder.setSingleChoiceItems(certificateArray, -1, (dialog, which) -> {
-            selectedCertificatePath = finalCertificatePathArray[which];
-        });
+        builder.setSingleChoiceItems(certificateArray, -1, (dialog, which) -> selectedCertificatePath = finalCertificatePathArray[which]);
 
         builder.setPositiveButton("Continuar", (dialog, which) -> {
             if (selectedCertificatePath != null) {
@@ -158,9 +176,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
             }
         });
 
-        builder.setNegativeButton("Cancelar", (dialog, which) -> {
-            dialog.dismiss();
-        });
+        builder.setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss());
         builder.show();
     }
 
@@ -228,9 +244,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
             addSignatureToPdf();
         });
 
-        builder.setNegativeButton("Cancelar", (dialog, which) -> {
-            dialog.dismiss();
-        });
+        builder.setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss());
 
         builder.show();
     }
@@ -286,7 +300,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         return signatureBitmap;
     }
-
 
     private void drawTextWithWrap(Canvas canvas, Paint paint, String text, float x, float y, float maxWidth) {
         int lineHeight = (int) (paint.descent() - paint.ascent());
@@ -366,6 +379,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
                         document.close();
                     }
                     Toast.makeText(this, "Documento firmado guardado en: " + uri.getPath(), Toast.LENGTH_LONG).show();
+                    NotificacionActivity.showNotification(this, "Documento", "Documento firmado correctamente");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -380,6 +394,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         closePdfRenderer();
     }
 }
+
 
 
 

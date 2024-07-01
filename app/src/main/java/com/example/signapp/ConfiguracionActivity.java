@@ -1,6 +1,5 @@
 package com.example.signapp;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -10,7 +9,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.text.InputType;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -165,7 +163,6 @@ public class ConfiguracionActivity extends AppCompatActivity implements Navigati
 
         Toast.makeText(this, "Preferencias guardadas", Toast.LENGTH_SHORT).show();
 
-        // Volver a la actividad principal o hacer otra acción necesaria
     }
 
     private void loadPreferences() {
