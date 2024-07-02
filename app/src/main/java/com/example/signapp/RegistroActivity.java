@@ -65,7 +65,6 @@ public class RegistroActivity extends AppCompatActivity {
             }
         });
 
-        // Agregar un ClickListener al botón de inicio de sesión
         buttonLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

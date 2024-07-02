@@ -60,7 +60,7 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
     private DatabaseHelper dbHelper;
     private String selectedFilePath;
     private String selectedCertificatePath;
-    private String importedCertificateAlias; // Añadido
+    private String importedCertificateAlias;
     private PrivateKey privateKey;
     private Certificate[] certificateChain;
 
@@ -148,14 +148,12 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         int id = item.getItemId();
 
         if (id == R.id.nav_inicio) {
-            // Acción cuando se selecciona el ítem de inicio
         } else if (id == R.id.nav_configuracion) {
             Intent intentConfig = new Intent(this, ConfiguracionActivity.class);
             intentConfig.putExtra("filePath", selectedFilePath);
             intentConfig.putExtra("certificatePath", selectedCertificatePath);
             startActivity(intentConfig);
         } else if (id == R.id.nav_politicasprivacidad) {
-            // Abrir URL en el navegador web
             String url = "https://administracion.gob.es/pag_Home/politicaDePrivacidad.html";
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setData(Uri.parse(url));
@@ -272,7 +270,7 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
                     SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(InicioActivity.this);
                     preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_PATH_PREFIX + System.currentTimeMillis(), selectedCertificatePath).apply();
                     preferences.edit().putString(PREF_IMPORTED_CERTIFICATE_ALIAS, importedCertificateAlias).apply(); // Guardar el alias del certificado importado
-                    Toast.makeText(InicioActivity.this, "Certificado importado correctamente", Toast.LENGTH_SHORT).show();  // Mostrar mensaje de confirmación
+                    Toast.makeText(InicioActivity.this, "Certificado importado correctamente", Toast.LENGTH_SHORT).show();
                     NotificacionActivity.showNotification(InicioActivity.this, "Certificado", "Certificado importado correctamente");
                 } else {
                     input.setError("Clave incorrecta");
@@ -328,18 +326,6 @@ public class InicioActivity extends AppCompatActivity implements NavigationView.
         }
     }
 
-
-
-
-    private String getStoredCertificateHash(String alias) {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        return preferences.getString(PREF_IMPORTED_CERTIFICATE_HASH_PREFIX + alias, null);
-    }
-
-    private String getStoredCertificateSalt(String alias) {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        return preferences.getString(PREF_IMPORTED_CERTIFICATE_SALT_PREFIX + alias, null);
-    }
 
     private boolean validateCertificatePassword(String alias, String password) {
         DatabaseHelper dbHelper = new DatabaseHelper(this);

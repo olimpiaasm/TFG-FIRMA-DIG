@@ -18,10 +18,9 @@ public class SplashActivity extends AppCompatActivity {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                // Abrir la siguiente actividad (por ejemplo, MainActivity)
                 Intent mainIntent = new Intent(SplashActivity.this, InicioActivity.class);
                 startActivity(mainIntent);
-                finish(); // Cierra la pantalla de inicio para evitar que el usuario regrese a ella
+                finish();
             }
         }, SPLASH_DURATION);
     }

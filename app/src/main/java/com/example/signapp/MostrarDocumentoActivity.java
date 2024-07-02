@@ -58,8 +58,8 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
     private Paint paint;
     private Bitmap signaturePreviewBitmap;
     private float scale = 1.0f; // Escala de la firma
-    private ImageView signaturePreviewImageView; // Declaración de la vista de la firma
-    private ImageView documentPreviewImageView; // Declaración de la vista del documento
+    private ImageView signaturePreviewImageView;
+    private ImageView documentPreviewImageView;
     private ScaleGestureDetector scaleGestureDetector;
 
     @Override
@@ -78,7 +78,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         importedCertificateAlias = getIntent().getStringExtra("importedCertificateAlias"); // Obtener el alias del certificado importado
         documentName = new File(documentPath).getName(); // Obtener el nombre del documento
         openPdfRenderer(documentPath);
-        showPage(currentPageIndex); // Muestra la primera página
+        showPage(currentPageIndex);
 
         fab.setOnClickListener(view -> showCertificateSelectionDialog());
 
@@ -193,7 +193,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
 
         documentPreviewImageView.setImageBitmap(pdfBitmap);
 
-        // Crear la firma actualizada con el nombre del documento y el certificado
         Bitmap signatureBitmap = createUpdatedSignatureBitmap();
         signaturePreviewBitmap = signatureBitmap;
         signaturePreviewImageView.setImageBitmap(signatureBitmap);
@@ -255,7 +254,6 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         boolean includeFecha = preferences.getBoolean("include_fecha", true);
         boolean includeLogo = preferences.getBoolean("include_logo", true);
 
-        // Obtener el nombre del documento y el alias del certificado importado
         String nombreDocumento = documentName;
         String nombreCertificado = importedCertificateAlias != null ? importedCertificateAlias : "Certificado no seleccionado";
 
@@ -264,7 +262,7 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         Bitmap signatureBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(signatureBitmap);
 
-        canvas.drawColor(Color.WHITE); // Limpiar el canvas antes de dibujar
+        canvas.drawColor(Color.WHITE);
 
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
@@ -274,23 +272,23 @@ public class MostrarDocumentoActivity extends AppCompatActivity {
         int textPadding = 10;
         int lineHeight = (int) (paint.descent() - paint.ascent());
 
-        // Dibuja el logo primero
+
         if (includeLogo) {
             Bitmap logoBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
             Bitmap scaledLogoBitmap = Bitmap.createScaledBitmap(logoBitmap, width, height, true);
             Paint logoPaint = new Paint();
-            logoPaint.setAlpha(50); // Opcional: hace el logo más translúcido
+            logoPaint.setAlpha(50);
             canvas.drawBitmap(scaledLogoBitmap, 0, 0, logoPaint);
         }
 
-        int y = 20; // Posición inicial del texto
+        int y = 20;
 
-        // Luego dibuja el texto sobre el logo
+
         if (includeNombre) {
             drawTextWithWrap(canvas, paint, "Firmado digitalmente por: " + nombreCertificado, textPadding, y, width - 2 * textPadding);
-            y += lineHeight + 20;  // Añadir espacio extra entre las líneas
+            y += lineHeight + 20;
             drawTextWithWrap(canvas, paint, "Nombre del documento: " + nombreDocumento, textPadding, y, width - 2 * textPadding);
-            y += lineHeight + 20;  // Añadir espacio extra entre las líneas
+            y += lineHeight + 20;
         }
 
         if (includeFecha) {

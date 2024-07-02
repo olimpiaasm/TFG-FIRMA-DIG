@@ -56,7 +56,7 @@ public class NotificacionActivity extends AppCompatActivity {
 
     public static void showNotification(Context context, String title, String message) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_lapiz_icono) // Asegúrate de tener un icono de notificación
+                .setSmallIcon(R.drawable.ic_lapiz_icono)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);
@@ -64,7 +64,6 @@ public class NotificacionActivity extends AppCompatActivity {
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         notificationManager.notify((int) System.currentTimeMillis(), builder.build());
 
-        // Store notification for later display
         AlmacenamientoNotificacion.addNotification(context, title + ": " + message);
     }
 }

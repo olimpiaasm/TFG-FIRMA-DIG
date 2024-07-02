@@ -26,7 +26,6 @@ public class RecuperarContraseñaActivity extends AppCompatActivity {
             if (email.isEmpty()) {
                 Toast.makeText(RecuperarContraseñaActivity.this, "Por favor, introduce tu correo electrónico", Toast.LENGTH_SHORT).show();
             } else {
-                // Aquí deberías implementar la lógica para enviar el correo de recuperación de contraseña.
                 Toast.makeText(RecuperarContraseñaActivity.this, "Correo de recuperación enviado", Toast.LENGTH_SHORT).show();
             }
         });
